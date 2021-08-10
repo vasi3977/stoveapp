@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+   <head>
+	<title>Centrala</title>
+	<link rel="stylesheet" href="../static/style.css/"> 
+   </head>
+   <body>
+
+	<h2>Centrala <span id="statusCentralaID">{{ statusCentrala }}</h2>
+         
+      	<h2>{{ time }}</h2>
+	<h2>Evacuare: <span id="evacID">{{ tempEvacuare }}</span> <sup>o</sup>C</h2>
+	<h2>Apa centrala: <span id="tempCentralaID">{{ tempCentrala }}</span> <sup>o</sup>C</h2>
+
+	<div>
+		<label for="cars">Centrala</label>
+  		<select name="stari" id="centrala">
+    			<option value=""></option>
+                      	<option value="0">Off</option>
+                      	<option value="1">Aprindere</option>
+                      	<option value="2">Stabil</option>
+                      	<option value="3">Ardere</option>
+                      	<option value="4">Stop Ardere</option>
+                      	<option value="6">Aprindere fara peleti</option>
+                      	<option value="7">Eroare Aprindere</option>
+                      	<option value="8">Eroare Ardere</option>
+			<option value="9">All Jobs Off</option>
+  		</select>
+		<button onclick="setStatusCentrala()">SET</button>
+	</div>
+	
+	<div>Rezistenta
+		<button onclick="rezistin()">IN</button>
+		<button onclick="rezistout()">OUT</button>
+	</div>
+	
+	<div>Ventilator
+		<button onclick="buttonOn('ventilator')">ON</button>
+		<button onclick="buttonOff('ventilator')">OFF</button>
+	</div>
+	<div>Sneck
+		<button onclick="buttonOn('sneck')">ON</button>
+		<button onclick="buttonOff('sneck')">OFF</button>
+	</div>
+	<div>Pompa
+		<button onclick="buttonOn('pompa')">ON</button>
+		<button onclick="buttonOff('pompa')">OFF</button>
+	</div>
+	<div>Rezistenta
+		<button onclick="buttonOn('rezistenta')">ON</button>
+		<button onclick="buttonOff('rezistenta')">OFF</button>
+	</div>
+	<div>timpSneckArdere: <span id="timpSneckArdereID">{{timpSneckArdere}}</span>
+		<input type="number" id="input2" placeholder="numar intreg">
+		<button onclick="timpSneckArdere()">SET</button>
+	</div>
+
+
+
+
+
+
+    <script>
+	var adresa = "http://192.168.0.25:5000"
+	function buttonOn(param2) {
+		url = adresa + "/pin/" + param2 + "/ON" 
+		console.log(url)
+		fetch(url)
+		.then(data => console.log(data));
+	}
+	function buttonOff(param3) {
+		url = adresa + "/pin/" + param3 + "/OFF" 
+		fetch(url)
+  		.then(data => console.log(data));
+	}
+
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("evacID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/tempEvacuare", true);
+        xhttp.send();
+      }, 2000) ;
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("statusCentralaID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/statusCentrala", true);
+        xhttp.send();
+      }, 1000) ;
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("tempCentralaID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/tempCentrala", true);
+        xhttp.send();
+      }, 2000) ;
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("timpSneckArdereID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/timpSneckArdere", true);
+        xhttp.send();
+      }, 1000) ;
+	function rezistin() {
+		var url = adresa + "/rezistentain"
+		fetch(url)
+  		.then(data => console.log(data));
+	};
+	function rezistout() {
+		var url = adresa + "/rezistentaout"
+		fetch(url)
+  		.then(data => console.log(data));
+	}
+		function timpSneckArdere() {
+		var param2 = document.getElementById("input2").value
+		var url = adresa + "/sneckTimpArdere/" + param2
+		fetch(url)
+		.then(data => console.log(data));
+	}
+	function setStatusCentrala() {
+		var param3 = document.getElementById("centrala").value
+		var url = adresa + "/statusCentrala/" + param3
+		fetch(url)
+		.then(data => console.log(data));
+
+	}
+
+
+
+
+	    </script>
+   </body>
+</html>
