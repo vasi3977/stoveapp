@@ -302,7 +302,10 @@ def statusCentralaParamFunc(statusCentralaParam):
 	elif(statusCentralaParam == 1):
 		aprindere()
 	elif(statusCentralaParam == 2):
-		stabil()
+		pinOFF("rezistenta")
+		pinON("ventilator")
+		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
+		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
 	elif(statusCentralaParam == 3):
 		ardere()
 	elif(statusCentralaParam == 4):
