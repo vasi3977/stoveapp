@@ -311,6 +311,8 @@ def statusCentralaParamFunc(statusCentralaParam):
 	elif(statusCentralaParam == 4):
 		stopArdere()
 	elif(statusCentralaParam == 6):
+		global temperaturaInitialaAprindere
+		temperaturaInitialaAprindere = sensor.readTempC()
 		stopSneck()
 	elif(statusCentralaParam == 7):
 		eroare("Aprindere")
