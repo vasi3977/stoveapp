@@ -318,6 +318,8 @@ def aprindere():
 	print("Aprindere")
 
 def allJobsOff():
+	global statusCentrala
+	statusCentrala = 'OFF'
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name != "senzori"):
