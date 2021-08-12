@@ -6,9 +6,18 @@ import MAX6675 as MAX6675
 from stepfor import stepfor, stepback
 from flask_apscheduler import APScheduler
 import RPi.GPIO as GPIO
+import sqlite3
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
+conn = sqlite3.connect("centrala.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("SELECT * FROM functionare")
+items = cursor.fetchall()
+for item in items:
+	statusCentrala = item[1]
 
 scheduler = APScheduler()
 scheduler.start()
@@ -36,7 +45,7 @@ def senzori():
 
 
 scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 2)
-statusCentrala = 'OFF'
+#statusCentrala = 'OFF'
 
 
 ventilator = 6
@@ -74,42 +83,74 @@ def pinON(par2):
 		GPIO.output(rezistenta, GPIO.LOW)
 
 def pompaFinal():
-	scheduler.remove_job(id="pompaFinal")
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "pompaFinal"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="pompaFinal")
 	pinOFF("pompa")
 	print("pompaFinal")
 
 
 def eroare(val):
+	global cursor, conn
 	global statusCentrala
 	statusCentrala = 'Eroare ' + val
-	scheduler.remove_job(id="startSneckArdere")
-	scheduler.remove_job(id="stopSneckArdere")
+	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="startSneckArdere")
+	#scheduler.remove_job(id="stopSneckArdere")
 	pinOFF("ventilator")
 	scheduler.remove_job(id="pompaFinal")
 
 
 def curatareFinal():
-	scheduler.remove_job(id="curatareFinal")
+	global cursor, conn
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "curatareFinal"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="curatareFinal")
 	pinOFF("ventilator")
 	scheduler.add_job(id="pompaFinal", func = pompaFinal, trigger = 'interval', seconds = 120)
 	global statusCentrala
 	statusCentrala = 'OFF'
+	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
 	print("curatareFinal")
 
 
 def stopArdere():
-	scheduler.remove_job(id="startSneckArdere")
-	scheduler.remove_job(id="stopSneckArdere")
+	global cursor, conn
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="startSneckArdere")
+	#scheduler.remove_job(id="stopSneckArdere")
 	scheduler.add_job(id="curatareFinal", func = curatareFinal, trigger = 'interval', seconds = 350)
 	pinOFF("sneck")
 	global statusCentrala
 	statusCentrala = 'Stop Ardere'
+	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
 	print("stopArdere")
 
 
 
 def stopSneckArdere():
-	scheduler.remove_job(id="stopSneckArdere")
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "stopSneckArdere"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="stopSneckArdere")
 	pinOFF("sneck")
 	print("stopSneckArdere")
 
@@ -119,12 +160,20 @@ def startSneckArdere():
 	global contor
 	global timpSneckArdere
 	if(contor == 0):
-		scheduler.remove_job(id="startSneckArdere")
-		scheduler.remove_job(id="stopSneckArdere")
+		jobs=scheduler.get_jobs()
+		for job in jobs:
+			if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
+				scheduler.remove_job(id = job.name)
+		#scheduler.remove_job(id="startSneckArdere")
+		#scheduler.remove_job(id="stopSneckArdere")
 		stopArdere()
 	elif(Temp < 30):
-		scheduler.remove_job(id="startSneckArdere")
-		scheduler.remove_job(id="stopSneckArdere")
+		jobs=scheduler.get_jobs()
+		for job in jobs:
+			if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
+				scheduler.remove_job(id = job.name)
+		#scheduler.remove_job(id="startSneckArdere")
+		#scheduler.remove_job(id="stopSneckArdere")
 		eroare("Ardere")
 	else:
 		pinON("sneck")
@@ -133,11 +182,19 @@ def startSneckArdere():
 
 
 def ardere():
+	global cursor, conn
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "ventilatorAprindere" or job.name == "stopAprindere" or job.name == "rezistentaAprindere"):
+			scheduler.remove_job(id = job.name)
 	#scheduler.remove_job(id="ventilatorAprindere")
 	#scheduler.remove_job(id="stopAprindere")
 	#scheduler.remove_job(id='rezistentaAprindere')
 	global statusCentrala
 	statusCentrala = 'Ardere'
+	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
 	pinON("pompa")
 	pinON("ventilator")
 	scheduler.add_job(id="startSneckArdere", func = startSneckArdere, trigger = 'interval', seconds = 12)
@@ -145,27 +202,43 @@ def ardere():
 
 
 def stopAprindere():
-	scheduler.remove_job(id="stopAprindere")
-	scheduler.remove_job(id="ventilatorAprindere")
-	scheduler.remove_job(id="stareTemperaturaEvacuare")
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "ventilatorAprindere" or job.name == "stopAprindere" or job.name == "stareTemperaturaEvacuare"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="stopAprindere")
+	#scheduler.remove_job(id="ventilatorAprindere")
+	#scheduler.remove_job(id="stareTemperaturaEvacuare")
 	pinOFF("rezistenta")
 	pinON("ventilator")
 	eroare("aprindere")
 	print("stopAprindere")
 
 def perioadaStabil():
-	scheduler.remove_job(id="perioadaStabil")
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "perioadaStabil"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="perioadaStabil")
 	ardere()
 
 def sneckStabilOff():
-	scheduler.remove_job(id="sneckStabilOff")
-	scheduler.remove_job(id="stopAprindere")
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "sneckStabilOff" or job.name == "stopAprindere"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id="sneckStabilOff")
+	#scheduler.remove_job(id="stopAprindere")
 	pinOFF("sneck")
 	print("sneckStabilOff")
 
 def perioadaSneckStabil():
-	schedule.remove_job(id="perioadaSneckStabil")
-	scheduler.remove_job(id="stopAprindere")	
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "perioadaSneckStabil" or job.name == "stopAprindere"):
+			scheduler.remove_job(id = job.name)
+	#schedule.remove_job(id="perioadaSneckStabil")
+	#scheduler.remove_job(id="stopAprindere")	
 	pinON("sneck")
 	scheduler.add_job(id="sneckStabilOff", func = sneckStabilOff, trigger = 'interval', seconds = 5)
 	print("perioadaSneckStabil")
@@ -173,17 +246,24 @@ def perioadaSneckStabil():
 
 def stareTemperaturaEvacuare():
 	print("stareTemperaturaEvacuare")
-	global Temp, temperaturaInitialaAprindere 
+	global Temp, temperaturaInitialaAprindere, cursor, conn
 	temperaturaEvacuare = Temp
 	if (temperaturaEvacuare - temperaturaInitialaAprindere > 10):
-		scheduler.remove_job(id="stareTemperaturaEvacuare")
-		scheduler.remove_job(id="stopAprindere")
-		scheduler.remove_job(id="ventilatorAprindere")
-		scheduler.remove_job(id='rezistentaAprindere')
+		jobs=scheduler.get_jobs()
+		for job in jobs:
+			if(job.name == "stareTemperaturaEvacuare" or job.name == "stopAprindere" or job.name == "ventilatorAprindere" or job.name == "rezistentaAprindere"):
+				scheduler.remove_job(id = job.name)
+		#scheduler.remove_job(id="stareTemperaturaEvacuare")
+		#scheduler.remove_job(id="stopAprindere")
+		#scheduler.remove_job(id="ventilatorAprindere")
+		#scheduler.remove_job(id='rezistentaAprindere')
 		pinOFF("rezistenta")
 		pinON("ventilator")
 		global statusCentrala
 		statusCentrala = "Stabil"
+		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+		cursor.execute(url)
+		conn.commit()
 		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
 		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
 
@@ -199,14 +279,20 @@ def ventilatorAprindere():
 
 
 def rezistentaAprindere():
-	scheduler.remove_job(id='rezistentaAprindere')
+	jobs=scheduler.get_jobs()
+	for job in jobs:
+		if(job.name == "rezistentaAprindere"):
+			scheduler.remove_job(id = job.name)
+	#scheduler.remove_job(id='rezistentaAprindere')
 	scheduler.add_job(id = "ventilatorAprindere", func = ventilatorAprindere, trigger = 'interval', seconds = 8)
 	print("rezistentaAprindere")
 
 
 def stopSneck():
-	global statusCentrala
+	global statusCentrala, cursor, conn
 	statusCentrala = 'Aprindere'
+	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name == "stopSneck"):
@@ -220,9 +306,12 @@ def stopSneck():
 
 
 def aprindere():
-	global temperaturaInitialaAprindere, Temp, statusCentrala
+	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn
 	temperaturaInitialaAprindere = Temp
 	statusCentrala = 'Aprindere'
+	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
 	pinON('sneck')
 	pinOFF('rezistenta')
 	scheduler.add_job(id="stopSneck", func = stopSneck, trigger = 'interval', seconds = 100)
