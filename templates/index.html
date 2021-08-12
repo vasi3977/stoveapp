@@ -1,18 +1,29 @@
 <!DOCTYPE html>
    <head>
 	<title>Centrala</title>
-	<link rel="stylesheet" href="../static/style.css/"> 
+	<link rel="stylesheet" href="../static/style.css"> 
    </head>
    <body>
 
-	<h2>Centrala <span id="statusCentralaID">{{ statusCentrala }}</h2> 
+	
+	<div class="card">
+		<div>
+			<h3 style="color: blue;">Centrala <span id="statusCentralaID">{{ statusCentrala }}</h2> 
+		</div>
+	
          
  <!--     	<h2>{{ time }}</h2> -->
-	<h2>Evacuare: <span id="evacID">{{ tempEvacuare }}</span> <sup>o</sup>C</h2>
-	<h2>Apa centrala: <span id="tempCentralaID">{{ tempCentrala }}</span> <sup>o</sup>C</h2>
-
 	<div>
-		<label for="cars">Centrala</label>
+		<h3 style="color: red;">Evacuare: <span id="evacID">{{ tempEvacuare }}</span> <sup>o</sup>C</h2>
+	</div>
+	<div>
+		<h3 style="color: red;">Apa centrala: <span id="tempCentralaID">{{ tempCentrala }}</span> <sup>o</sup>C</h2>
+	</div>
+	
+	</div>
+	<div class="card">
+	<div>
+		<label for="cars" >Centrala</label>
   		<select name="stari" id="centrala">
     			<option value=""></option>
                       	<option value="0">Off</option>
@@ -25,38 +36,36 @@
                       	<option value="8">Eroare Ardere</option>
 			<option value="9">All Jobs Off</option>
   		</select>
-		<button onclick="setStatusCentrala()">SET</button>
+		<button onclick="setStatusCentrala()" class="btn btn-primary">SET</button>
 	</div>
 	
-	<div>Rezistenta
-		<button onclick="rezistin()">IN</button>
-		<button onclick="rezistout()">OUT</button>
-	</div>
-	
+		
 	<div>Ventilator
-		<button onclick="buttonOn('ventilator')">ON</button>
-		<button onclick="buttonOff('ventilator')">OFF</button>
+		<button onclick="buttonOn('ventilator')" class="btn btn-primary">ON</button>
+		<button onclick="buttonOff('ventilator')" class="btn btn-primary">OFF</button>
 	</div>
 	<div>Sneck
-		<button onclick="buttonOn('sneck')">ON</button>
-		<button onclick="buttonOff('sneck')">OFF</button>
+		<button onclick="buttonOn('sneck')" class="btn btn-primary">ON</button>
+		<button onclick="buttonOff('sneck')" class="btn btn-primary">OFF</button>
 	</div>
 	<div>Pompa
-		<button onclick="buttonOn('pompa')">ON</button>
-		<button onclick="buttonOff('pompa')">OFF</button>
+		<button onclick="buttonOn('pompa')" class="btn btn-primary">ON</button>
+		<button onclick="buttonOff('pompa')" class="btn btn-primary">OFF</button>
 	</div>
 	<div>Rezistenta
-		<button onclick="buttonOn('rezistenta')">ON</button>
-		<button onclick="buttonOff('rezistenta')">OFF</button>
+		<button onclick="buttonOn('rezistenta')" class="btn btn-primary">ON</button>
+		<button onclick="buttonOff('rezistenta')" class="btn btn-primary">OFF</button>
+		<button onclick="rezistin()" class="btn btn-primary">IN</button>
+		<button onclick="rezistout()" class="btn btn-primary">OUT</button>
 	</div>
 	<div>timpSneckArdere: <span id="timpSneckArdereID">{{timpSneckArdere}}</span>
-		<input type="number" id="input2" placeholder="numar intreg">
-		<button onclick="timpSneckArdere()">SET</button>
+		<input type="number" id="input2" placeholder="nr intreg">
+		<button onclick="timpSneckArdere()" class="btn btn-primary">SET</button>
+	</div>
 	</div>
 
 
-
-
+	
 
 
     <script>
