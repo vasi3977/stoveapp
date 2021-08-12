@@ -24,7 +24,7 @@ sensor = MAX6675.MAX6675(CSK,CS,DO)
 
 Temp = sensor.readTempC()
 c = read_temp()
-statusCentrala = 'Aprindere'
+statusCentrala = 'OFF'
 
 
 ventilator = 6
@@ -232,10 +232,10 @@ pinOFF("rezistenta")
 
 @app.route("/")
 def index():
-	now = datetime.datetime.now()
-	timeString = now.strftime("%H:%M   %d/%m/%Y")
+#	now = datetime.datetime.now()
+#	timeString = now.strftime("%H:%M   %d/%m/%Y")
 	templateData = {
-		'time': timeString,
+#		'time': timeString,
 		'tempEvacuare': Temp,
 		'tempCentrala': c,
 		'statusCentrala': statusCentrala,
