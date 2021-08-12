@@ -22,8 +22,20 @@ CS = 20
 DO = 16
 sensor = MAX6675.MAX6675(CSK,CS,DO)
 
+
 Temp = sensor.readTempC()
 c = read_temp()
+
+
+def senzori():
+	global Temp, c
+	Temp = sensor.readTempC()
+	c = read_temp()
+	print(Temp, " ", c)
+	return "back"
+
+
+scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 2)
 statusCentrala = 'OFF'
 
 
@@ -110,7 +122,7 @@ def startSneckArdere():
 		scheduler.remove_job(id="startSneckArdere")
 		scheduler.remove_job(id="stopSneckArdere")
 		stopArdere()
-	elif(Temp < 10):
+	elif(Temp < 30):
 		scheduler.remove_job(id="startSneckArdere")
 		scheduler.remove_job(id="stopSneckArdere")
 		eroare("Ardere")
@@ -219,7 +231,8 @@ def aprindere():
 def allJobsOff():
 	jobs=scheduler.get_jobs()
 	for job in jobs:
-		scheduler.remove_job(id = job.name)
+		if(job.name != "senzori"):
+			scheduler.remove_job(id = job.name)
 	#print(f[0].name)
 
 
@@ -234,6 +247,7 @@ pinOFF("rezistenta")
 def index():
 #	now = datetime.datetime.now()
 #	timeString = now.strftime("%H:%M   %d/%m/%Y")
+	global Temp, c, statusCentrala, timpSneckArdere
 	templateData = {
 #		'time': timeString,
 		'tempEvacuare': Temp,
@@ -247,14 +261,14 @@ def index():
 @app.route("/tempEvacuare")
 def tempEvacuare():
 	global Temp
-	Temp = sensor.readTempC()
+	#Temp = sensor.readTempC()
 	return str(Temp)
 
 
 @app.route("/tempCentrala")
 def tempCentrala():
 	global c
-	c = read_temp()
+	#c = read_temp()
 	return str(c)
 
 @app.route("/rezistentain")
