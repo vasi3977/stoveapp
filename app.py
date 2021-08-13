@@ -29,8 +29,6 @@ else:
 
 scheduler = APScheduler()
 scheduler.start()
-var = 5
-contor = 1
 
 
 timpSneckArdere = 1.8
@@ -185,17 +183,8 @@ def stopSneckArdere():
 
 def startSneckArdere():
 	print("startSneckArdere")
-	global contor
 	global timpSneckArdere
-	if(contor == 0):
-		jobs=scheduler.get_jobs()
-		for job in jobs:
-			if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
-				scheduler.remove_job(id = job.name)
-		#scheduler.remove_job(id="startSneckArdere")
-		#scheduler.remove_job(id="stopSneckArdere")
-		stopArdere()
-	elif(Temp < 30):
+	if(Temp < 30):
 		jobs=scheduler.get_jobs()
 		for job in jobs:
 			if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
@@ -459,6 +448,13 @@ def statusCentralaParamFunc(statusCentralaParam):
 	elif(statusCentralaParam == 9):
 		allJobsOff()
 	return "back"
+
+@app.route("/startCentrala/<string:val>")
+def startCentrala(val):
+	if (val == "START"):
+		aprindere()
+	elif (val == "STOP"):
+		stopArdere()
 
 
 
