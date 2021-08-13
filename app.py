@@ -19,10 +19,19 @@ items = cursor.fetchall()
 for item in items:
 	statusCentrala = item[1]
 
+cursor.execute("SELECT * FROM datefunctionare ORDER BY data_pornire DESC LIMIT 1")
+items = cursor.fetchall()
+if (len(items) == 0):
+	numarCurent = 0
+else:
+	for item in items:
+		numarCurent = item[0]
+
 scheduler = APScheduler()
 scheduler.start()
 var = 5
 contor = 1
+
 
 timpSneckArdere = 1.8
 
@@ -40,7 +49,7 @@ def senzori():
 	global Temp, c
 	Temp = sensor.readTempC()
 	c = read_temp()
-	print(Temp, " ", c)
+	#print(Temp, " ", c)
 	return "back"
 
 
@@ -110,7 +119,7 @@ def eroare(val):
 
 
 def curatareFinal():
-	global cursor, conn
+	global cursor, conn, numarCurent
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name == "curatareFinal"):
@@ -121,6 +130,15 @@ def curatareFinal():
 	global statusCentrala
 	statusCentrala = 'OFF'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+	url3 = "SELECT * FROM datefunctionare WHERE numar = "+str(numarCurent)
+	cursor.execute(url3)
+	items = cursor.fetchall()
+	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
+	datafinala = datetime.datetime.now()
+	diferenta = datafinala - datainitiala
+
+	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+	cursor.execute(url2)
 	cursor.execute(url)
 	conn.commit()
 	print("curatareFinal")
@@ -194,6 +212,8 @@ def ardere():
 	statusCentrala = 'Ardere'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
+	url1 = "INSERT INTO datefunctionare VALUES (1, datetime('now'), datetime('now'), '')"
+	cursor.execute(url2)
 	conn.commit()
 	pinON("pompa")
 	pinON("ventilator")
@@ -306,11 +326,14 @@ def stopSneck():
 
 
 def aprindere():
-	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn
+	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn, numarCurent
+	numarCurent += 1
 	temperaturaInitialaAprindere = Temp
 	statusCentrala = 'Aprindere'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
+	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now())+"', '"+str(datetime.datetime.now())+"', '')"
+	cursor.execute(url2)
 	conn.commit()
 	pinON('sneck')
 	pinOFF('rezistenta')
