@@ -107,6 +107,16 @@ def eroare(val):
 	statusCentrala = 'Eroare ' + val
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
+	url3 = "SELECT * FROM datefunctionare WHERE numar = "+str(numarCurent)
+	cursor.execute(url3)
+	items = cursor.fetchall()
+	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
+	datafinala = datetime.datetime.now()
+	diferenta = datafinala - datainitiala
+
+	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+	cursor.execute(url2)
+
 	conn.commit()
 	jobs=scheduler.get_jobs()
 	for job in jobs:
