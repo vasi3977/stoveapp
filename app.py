@@ -11,25 +11,8 @@ import sqlite3
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-conn = sqlite3.connect("centrala.db", check_same_thread=False)
-cursor = conn.cursor()
-
-cursor.execute("SELECT * FROM functionare")
-items = cursor.fetchall()
-for item in items:
-	statusCentrala = item[1]
-
-cursor.execute("SELECT * FROM datefunctionare ORDER BY data_pornire DESC LIMIT 1")
-items = cursor.fetchall()
-if (len(items) == 0):
-	numarCurent = 0
-else:
-	for item in items:
-		numarCurent = item[0]
-
 scheduler = APScheduler()
 scheduler.start()
-
 
 timpSneckArdere = 1.8
 
@@ -41,6 +24,44 @@ sensor = MAX6675.MAX6675(CSK,CS,DO)
 
 Temp = sensor.readTempC()
 c = read_temp()
+
+
+
+conn = sqlite3.connect("centrala.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("SELECT * FROM functionare")
+items = cursor.fetchall()
+for item in items:
+	statusCentrala = item[1]
+	if(statusCentralaParam == 1):
+		temperaturaInitialaAprindere = sensor.readTempC()
+		stopSneck()
+	elif(statusCentralaParam == 2):
+		pinOFF("rezistenta")
+		pinON("ventilator")
+		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
+		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
+	elif(statusCentralaParam == 3):
+		ardere()
+	elif(statusCentralaParam == 4):
+		stopArdere()
+	elif(statusCentralaParam == 7):
+		eroare("Aprindere")
+	elif(statusCentralaParam == 8):
+		eroare("Ardere")
+
+
+cursor.execute("SELECT * FROM datefunctionare ORDER BY data_pornire DESC LIMIT 1")
+items = cursor.fetchall()
+if (len(items) == 0):
+	numarCurent = 0
+else:
+	for item in items:
+		numarCurent = item[0]
+
+
+
 
 
 def senzori():
