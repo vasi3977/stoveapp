@@ -34,21 +34,21 @@ cursor.execute("SELECT * FROM functionare")
 items = cursor.fetchall()
 for item in items:
 	statusCentrala = item[1]
-	if(statusCentralaParam == 1):
+	if(statusCentrala == "Aprindere"):
 		temperaturaInitialaAprindere = sensor.readTempC()
 		stopSneck()
-	elif(statusCentralaParam == 2):
+	elif(statusCentrala == "Stabil"):
 		pinOFF("rezistenta")
 		pinON("ventilator")
 		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
 		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
-	elif(statusCentralaParam == 3):
+	elif(statusCentrala == "Ardere"):
 		ardere()
-	elif(statusCentralaParam == 4):
+	elif(statusCentrala == "StopArdere"):
 		stopArdere()
-	elif(statusCentralaParam == 7):
+	elif(statusCentrala == "Eroare Aprindere"):
 		eroare("Aprindere")
-	elif(statusCentralaParam == 8):
+	elif(statusCentrala == "Eroare Ardere"):
 		eroare("Ardere")
 
 
