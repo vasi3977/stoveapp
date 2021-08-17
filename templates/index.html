@@ -28,7 +28,7 @@
     			<option value=""></option>
                       	<option value="0">Off</option>
                       	<option value="1">Aprindere</option>
-                      	<option value="2">Stabil</option>
+                  <!--  <option value="2">Stabil</option>  -->
                       	<option value="3">Ardere</option>
                       	<option value="4">Stop Ardere</option>
                       	<option value="6">Aprindere fara peleti</option>
@@ -69,7 +69,7 @@
 
 
     <script>
-	var adresa = "http://192.168.0.25:5000"
+	var adresa = "http://192.168.1.211:5000"
 	function buttonOn(param2) {
 		url = adresa + "/pin/" + param2 + "/ON" 
 		console.log(url)

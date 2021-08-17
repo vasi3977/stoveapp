@@ -423,16 +423,19 @@ def statusCentralaFunc():
 
 @app.route("/statusCentrala/<int:statusCentralaParam>")
 def statusCentralaParamFunc(statusCentralaParam):
-	global statusCentrala
+	global statusCentrala, cursor, conn
 	if(statusCentralaParam == 0):
 		statusCentrala = "OFF"
+		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+		cursor.execute(url)
+		conn.commit()
 	elif(statusCentralaParam == 1):
 		aprindere()
-	elif(statusCentralaParam == 2):
-		pinOFF("rezistenta")
-		pinON("ventilator")
-		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
-		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
+#	elif(statusCentralaParam == 2):
+#		pinOFF("rezistenta")
+#		pinON("ventilator")
+#		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
+#		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
 	elif(statusCentralaParam == 3):
 		ardere()
 	elif(statusCentralaParam == 4):
@@ -447,6 +450,10 @@ def statusCentralaParamFunc(statusCentralaParam):
 		eroare("Ardere")
 	elif(statusCentralaParam == 9):
 		allJobsOff()
+		statusCentrala = "OFF"
+		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+		cursor.execute(url)
+		conn.commit()
 	return "back"
 
 @app.route("/startCentrala/<string:val>")
