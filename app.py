@@ -60,10 +60,6 @@ else:
 	for item in items:
 		numarCurent = item[0]
 
-
-
-
-
 def senzori():
 	global Temp, c
 	Temp = sensor.readTempC()
@@ -407,12 +403,12 @@ def tempCentrala():
 
 @app.route("/rezistentain")
 def rezistentain():
-	stepfor()
+	stepfor(1)
 	return "for"
 
 @app.route("/rezistentaout")
 def rezistentaout():
-	stepback()
+	stepback(1)
 	return "back"
 
 
