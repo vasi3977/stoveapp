@@ -247,6 +247,7 @@ def stopAprindere():
 	#scheduler.remove_job(id="stareTemperaturaEvacuare")
 	pinOFF("rezistenta")
 	pinON("ventilator")
+	stepback(1)
 	eroare("aprindere")
 	print("stopAprindere")
 
@@ -295,6 +296,7 @@ def stareTemperaturaEvacuare():
 		#scheduler.remove_job(id='rezistentaAprindere')
 		pinOFF("rezistenta")
 		pinON("ventilator")
+		stepback(1)
 		global statusCentrala
 		statusCentrala = "Stabil"
 		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
@@ -336,6 +338,7 @@ def stopSneck():
 	pinOFF('sneck')
 	scheduler.add_job(id="stopAprindere", func = stopAprindere, trigger = 'interval', seconds = 900)
 	pinON('rezistenta')
+	stepfor(1)
 	scheduler.add_job(id="rezistentaAprindere", func = rezistentaAprindere, trigger = 'interval', seconds = 120)
 	scheduler.add_job(id="stareTemperaturaEvacuare", func = stareTemperaturaEvacuare, trigger = 'interval', seconds = 3)
 	print("stopSneck")
