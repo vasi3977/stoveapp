@@ -30,26 +30,6 @@ c = read_temp()
 conn = sqlite3.connect("centrala.db", check_same_thread=False)
 cursor = conn.cursor()
 
-cursor.execute("SELECT * FROM functionare")
-items = cursor.fetchall()
-for item in items:
-	statusCentrala = item[1]
-	if(statusCentrala == "Aprindere"):
-		temperaturaInitialaAprindere = sensor.readTempC()
-		stopSneck()
-	elif(statusCentrala == "Stabil"):
-		pinOFF("rezistenta")
-		pinON("ventilator")
-		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
-		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
-	elif(statusCentrala == "Ardere"):
-		ardere()
-	elif(statusCentrala == "StopArdere"):
-		stopArdere()
-	elif(statusCentrala == "Eroare Aprindere"):
-		eroare("Aprindere")
-	elif(statusCentrala == "Eroare Ardere"):
-		eroare("Ardere")
 
 
 cursor.execute("SELECT * FROM datefunctionare ORDER BY data_pornire DESC LIMIT 1")
@@ -122,8 +102,10 @@ def eroare(val):
 	statusCentrala = 'Eroare ' + val
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
+	conn.commit()
 	url3 = "SELECT * FROM datefunctionare WHERE numar = "+str(numarCurent)
 	cursor.execute(url3)
+	conn.commit()
 	items = cursor.fetchall()
 	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
 	datafinala = datetime.datetime.now()
@@ -135,12 +117,12 @@ def eroare(val):
 	conn.commit()
 	jobs=scheduler.get_jobs()
 	for job in jobs:
-		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
+		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere" or job.name == "pompaFinal"):
 			scheduler.remove_job(id = job.name)
 	#scheduler.remove_job(id="startSneckArdere")
 	#scheduler.remove_job(id="stopSneckArdere")
 	pinOFF("ventilator")
-	scheduler.remove_job(id="pompaFinal")
+	#scheduler.remove_job(id="pompaFinal")
 
 
 def curatareFinal():
@@ -157,6 +139,7 @@ def curatareFinal():
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	url3 = "SELECT * FROM datefunctionare WHERE numar = "+str(numarCurent)
 	cursor.execute(url3)
+	conn.commit()
 	items = cursor.fetchall()
 	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
 	datafinala = datetime.datetime.now()
@@ -164,6 +147,7 @@ def curatareFinal():
 
 	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
 	cursor.execute(url2)
+	conn.commit()
 	cursor.execute(url)
 	conn.commit()
 	print("curatareFinal")
@@ -228,6 +212,7 @@ def ardere():
 	statusCentrala = 'Ardere'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
+	conn.commit()
 	url1 = "INSERT INTO datefunctionare VALUES (1, datetime('now'), datetime('now'), '')"
 	cursor.execute(url2)
 	conn.commit()
@@ -331,6 +316,7 @@ def stopSneck():
 	statusCentrala = 'Aprindere'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
+	conn.commit()
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name == "stopSneck"):
@@ -367,6 +353,34 @@ def allJobsOff():
 		if(job.name != "senzori"):
 			scheduler.remove_job(id = job.name)
 	#print(f[0].name)
+
+cursor.execute("SELECT * FROM functionare")
+items = cursor.fetchall()
+for item in items:
+	statusCentrala = item[1]
+	if(statusCentrala == "Aprindere"):
+		print("Aprindere")
+		temperaturaInitialaAprindere = sensor.readTempC()
+		stopSneck()
+	elif(statusCentrala == "Stabil"):
+		print("Stabil")
+		pinOFF("rezistenta")
+		pinON("ventilator")
+		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
+		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
+	elif(statusCentrala == "Ardere"):
+		print("Ardere")
+		ardere()
+	elif(statusCentrala == "Stop Ardere"):
+		print("Stop Ardere")
+		stopArdere()
+	elif(statusCentrala == "Eroare Aprindere"):
+		print("Eroare Aprindere")
+		eroare("Aprindere")
+	elif(statusCentrala == "Eroare Ardere"):
+		print("Eroare Ardere")
+		eroare("Ardere")
+
 
 
 app = Flask(__name__)
@@ -451,11 +465,15 @@ def statusCentralaParamFunc(statusCentralaParam):
 		conn.commit()
 	elif(statusCentralaParam == 1):
 		aprindere()
-#	elif(statusCentralaParam == 2):
-#		pinOFF("rezistenta")
-#		pinON("ventilator")
-#		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
-#		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
+	elif(statusCentralaParam == 2):
+		statusCentrala = "Stabil"
+		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
+		cursor.execute(url)
+		conn.commit()
+		pinOFF("rezistenta")
+		pinON("ventilator")
+		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
+		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
 	elif(statusCentralaParam == 3):
 		ardere()
 	elif(statusCentralaParam == 4):
@@ -478,11 +496,11 @@ def statusCentralaParamFunc(statusCentralaParam):
 
 @app.route("/startCentrala/<string:val>")
 def startCentrala(val):
+	global statusCentrala
 	if (val == "START"):
-		aprindere()
+		pass
 	elif (val == "STOP"):
-		stopArdere()
-
+		pass
 
 
 if __name__ == "__main__":
