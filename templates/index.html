@@ -19,6 +19,10 @@
 	<div>
 		<h3 style="color: red;">Apa centrala: <span id="tempCentralaID">{{ tempCentrala }}</span> <sup>o</sup>C</h2>
 	</div>
+	<div>
+		<h3 style="color: red;">Rezervor peleti: <span id="distPeletiID">{{ dist }}</span> cm</h2>
+	</div>
+
 	
 	</div>
 	<div class="card">
@@ -28,7 +32,7 @@
     			<option value=""></option>
                       	<option value="0">Off</option>
                       	<option value="1">Aprindere</option>
-                  <!--  <option value="2">Stabil</option>  -->
+                  	<option value="2">Stabil</option>
                       	<option value="3">Ardere</option>
                       	<option value="4">Stop Ardere</option>
                       	<option value="6">Aprindere fara peleti</option>
@@ -71,15 +75,16 @@
     <script>
 	var adresa = "http://192.168.1.211:5000"
 	function buttonOn(param2) {
-		url = adresa + "/pin/" + param2 + "/ON" 
-		console.log(url)
-		fetch(url)
-		.then(data => console.log(data));
+		url = "/pin/" + param2 + "/ON" 
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", url, true);
+        	xhttp.send();
 	}
 	function buttonOff(param3) {
-		url = adresa + "/pin/" + param3 + "/OFF" 
-		fetch(url)
-  		.then(data => console.log(data));
+		url = "/pin/" + param3 + "/OFF" 
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", url, true);
+        	xhttp.send();
 	}
 
 	setInterval(function ( ) {
@@ -116,34 +121,48 @@
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("distPeletiID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/distance", true);
+        xhttp.send();
+      }, 2000) ;
+
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
             document.getElementById("timpSneckArdereID").innerHTML = this.responseText;
           }
         };
         xhttp.open("GET", "/timpSneckArdere", true);
         xhttp.send();
       }, 1000) ;
+	
 	function rezistin() {
-		var url = adresa + "/rezistentain"
-		fetch(url)
-  		.then(data => console.log(data));
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", "/rezistentain", true);
+        	xhttp.send();
 	};
 	function rezistout() {
-		var url = adresa + "/rezistentaout"
-		fetch(url)
-  		.then(data => console.log(data));
-	}
-		function timpSneckArdere() {
-		var param2 = document.getElementById("input2").value
-		var url = adresa + "/sneckTimpArdere/" + param2
-		fetch(url)
-		.then(data => console.log(data));
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", "/rezistentaout", true);
+        	xhttp.send();
 	}
 	function setStatusCentrala() {
 		var param3 = document.getElementById("centrala").value
-		var url = adresa + "/statusCentrala/" + param3
-		fetch(url)
-		.then(data => console.log(data));
+		var url = "/statusCentrala/" + param3
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", url, true);
+        	xhttp.send();
 
+	}
+	function timpSneckArdere() {
+		var param4 = document.getElementById("input2").value.toString()
+		var url = "/sneckTimpArdere/" + param4
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", url, true);
+        	xhttp.send();
 	}
 
 

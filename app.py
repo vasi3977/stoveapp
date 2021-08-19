@@ -4,6 +4,7 @@ import datetime
 from ds18b20 import read_temp
 import MAX6675 as MAX6675
 from stepfor import stepfor, stepback
+from distance import distance
 from flask_apscheduler import APScheduler
 import RPi.GPIO as GPIO
 import sqlite3
@@ -20,6 +21,8 @@ CSK = 21
 CS = 20
 DO = 16
 sensor = MAX6675.MAX6675(CSK,CS,DO)
+
+dist = round(distance(), 1)
 
 
 Temp = sensor.readTempC()
@@ -41,9 +44,10 @@ else:
 		numarCurent = item[0]
 
 def senzori():
-	global Temp, c
+	global Temp, c, dist
 	Temp = sensor.readTempC()
 	c = read_temp()
+	dist = round(distance(), 1)
 	#print(Temp, " ", c)
 	return "back"
 
@@ -358,6 +362,7 @@ cursor.execute("SELECT * FROM functionare")
 items = cursor.fetchall()
 for item in items:
 	statusCentrala = item[1]
+	timpSneckArdere = item[2]
 	if(statusCentrala == "Aprindere"):
 		print("Aprindere")
 		temperaturaInitialaAprindere = sensor.readTempC()
@@ -380,7 +385,7 @@ for item in items:
 	elif(statusCentrala == "Eroare Ardere"):
 		print("Eroare Ardere")
 		eroare("Ardere")
-
+	
 
 
 app = Flask(__name__)
@@ -397,6 +402,7 @@ def index():
 	global Temp, c, statusCentrala, timpSneckArdere
 	templateData = {
 #		'time': timeString,
+		'dist': dist,
 		'tempEvacuare': Temp,
 		'tempCentrala': c,
 		'statusCentrala': statusCentrala,
@@ -417,6 +423,12 @@ def tempCentrala():
 	global c
 	#c = read_temp()
 	return str(c)
+
+@app.route("/distance")
+def distPeleti():
+	global dist
+	return str(dist)
+
 
 @app.route("/rezistentain")
 def rezistentain():
@@ -443,6 +455,9 @@ def pin(pin_id, val):
 def setareSneckTimpArdere(timpArdere):
 	global timpSneckArdere
 	timpSneckArdere = timpArdere
+	url = "UPDATE functionare SET tsneck = '"+ str(timpSneckArdere) +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
 	return "back"
 
 @app.route("/timpSneckArdere")
