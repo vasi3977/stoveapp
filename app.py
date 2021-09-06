@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template
 import datetime
 from ds18b20 import read_temp
@@ -8,23 +7,35 @@ from distance import distance
 from flask_apscheduler import APScheduler
 import RPi.GPIO as GPIO
 import sqlite3
+import os
+import smtplib
+from requests import get
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+ventilator = 6
+sneck = 13
+pompa = 19
+rezistenta = 26
+temperaturaInitialaAprindere = 0
+
+
+GPIO.setup(ventilator, GPIO.OUT)
+GPIO.setup(sneck, GPIO.OUT)
+GPIO.setup(pompa, GPIO.OUT)
+GPIO.setup(rezistenta, GPIO.OUT)
+
 
 scheduler = APScheduler()
 scheduler.start()
 
-timpSneckArdere = 1.8
 
 CSK = 21
 CS = 20
 DO = 16
 sensor = MAX6675.MAX6675(CSK,CS,DO)
 
-dist = round(distance(), 1)
 
 
+dist = round(distance())
 Temp = sensor.readTempC()
 c = read_temp()
 
@@ -43,29 +54,70 @@ else:
 	for item in items:
 		numarCurent = item[0]
 
+def temperaturaLiving():
+	global tempLiving
+	temperature = get('http://192.168.1.137:5555/temperature').text
+	tempLiving = float(temperature)
+	return tempLiving
+
+tempLiving = temperaturaLiving()
+
 def senzori():
 	global Temp, c, dist
-	Temp = sensor.readTempC()
-	c = read_temp()
-	dist = round(distance(), 1)
-	#print(Temp, " ", c)
+	Temp = round(sensor.readTempC(), 1)
+	c = round(read_temp(), 1)
+	dist = round(distance())
 	return "back"
 
+def sendMail():
+	EMAIL_ADRESS = 'vasile03.stan@gmail.com'
+	EMAIL_PASSWORD = 'Vasile3#!'
 
-scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 2)
+	ip = get('https://api.ipify.org').text
+#	print('My public IP address is: {}'.format(ip))
+
+	with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+		smtp.ehlo()
+		smtp.starttls()
+		smtp.ehlo()
+		smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
+		subject = "Adresa de ip"
+		body = 'My public IP address is: ' + ip
+		msg = f'Subject: {subject}\n\n{body}'
+		smtp.sendmail(EMAIL_ADRESS, 'vasile.stan@gmail.com', msg)
+
+def sendMailPornire():
+	EMAIL_ADRESS = 'vasile03.stan@gmail.com'
+	EMAIL_PASSWORD = 'Vasile3#!'
+
+	with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+		smtp.ehlo()
+		smtp.starttls()
+		smtp.ehlo()
+		smtp.login(EMAIL_ADRESS, EMAIL_PASSWORD)
+		subject = "Pornire raspberry"
+		body = 'Pornire Raspberry PI ZERO W'
+		msg = f'Subject: {subject}\n\n{body}'
+		smtp.sendmail(EMAIL_ADRESS, 'vasile.stan@gmail.com', msg)
+
+
+
+
+#sendMailPornire()
+
+jobs=scheduler.get_jobs()
+for job in jobs:
+	if(job.name == "senzori"):
+		scheduler.remove_job(id = job.name)
+scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 3, max_instances=5)
+
+scheduler.add_job(id="temperaturaLiving", func = temperaturaLiving, trigger = 'interval', seconds = 5, max_instances=5)
+
+scheduler.add_job(id="mail", func = sendMail, trigger = 'interval', seconds = 21600, max_instances=5)
 #statusCentrala = 'OFF'
 
 
-ventilator = 6
-sneck = 13
-pompa = 19
-rezistenta = 26
-temperaturaInitialaAprindere = 0
 
-GPIO.setup(ventilator, GPIO.OUT)
-GPIO.setup(sneck, GPIO.OUT)
-GPIO.setup(pompa, GPIO.OUT)
-GPIO.setup(rezistenta, GPIO.OUT)
 
 
 def pinOFF(par1):
@@ -336,9 +388,9 @@ def stopSneck():
 
 def aprindere():
 	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn, numarCurent
+	statusCentrala = 'Aprindere'
 	numarCurent += 1
 	temperaturaInitialaAprindere = Temp
-	statusCentrala = 'Aprindere'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
 	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now())+"', '"+str(datetime.datetime.now())+"', '')"
@@ -354,15 +406,68 @@ def allJobsOff():
 	statusCentrala = 'OFF'
 	jobs=scheduler.get_jobs()
 	for job in jobs:
-		if(job.name != "senzori"):
+		if(job.name != "senzori" or job.name != "mail"):
 			scheduler.remove_job(id = job.name)
 	#print(f[0].name)
+
+def programCentralaMonitorFunctionare(program):
+	global statusCentrala, startTemperatura, stopTemperatura
+	if(program == "PROG"):
+		weekday = float(datetime.datetime.now().strftime("%w"))
+		hour = float(datetime.datetime.now().strftime("%H"))
+		minute = float(datetime.datetime.now().strftime("%M"))
+		if(1<= weekday and weekday <=5):     
+			if((22 > hour and hour >= 17) or (8 > hour and (hour >= 6 and minute >= 30))):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(22 < hour or (hour <= 6 and minute < 30)):
+				startTemperatura = 19
+				stopTemperatura = 20
+			else:
+				startTemperatura = 20.5
+				stopTemperatura = 21.5
+		elif(23 > hour and hour >= 8):
+			startTemperatura = 21.0
+			stopTemperatura = 22.0
+		else:
+			startTemperatura = 19.5
+			stopTemperatura = 20.5
+	if(program == "PROG1"):
+		startTemperatura = 21
+		stopTemperatura = 22
+	if(program == "PROG2"):
+		startTemperatura = 21.5
+		stopTemperatura = 22.5
+	if(program == "PROG1"):
+		startTemperatura = 21
+		stopTemperatura = 22
+	if(program == "AER"):
+		startTemperatura = 11
+		stopTemperatura = 12
+	if(program == "CALD"):
+		startTemperatura = 27
+		stopTemperatura = 28
+
+def statusCentralaMonitor():
+	global tempLiving, startTemperatura, stopTemperatura
+	if(tempLiving < startTemperatura):
+		if(statusCentrala == "OFF"):
+			aprindere()
+	if(tempLiving > stopTemperatura):
+		if(statusCentrala == "ARDERE"):
+			stopArdere()
+
+scheduler.add_job(id="statusCentralaMonitor", func = statusCentralaMonitor, trigger = 'interval', seconds = 2, max_instances=5)
+
 
 cursor.execute("SELECT * FROM functionare")
 items = cursor.fetchall()
 for item in items:
 	statusCentrala = item[1]
 	timpSneckArdere = item[2]
+	stareCentrala = item[3]
+	statusProgram = item[4]
+	programCentralaMonitorFunctionare(statusProgram)
 	if(statusCentrala == "Aprindere"):
 		print("Aprindere")
 		temperaturaInitialaAprindere = sensor.readTempC()
@@ -410,6 +515,34 @@ def index():
 	}
 	return render_template('index.html', **templateData)
 
+@app.route("/programCentrala")
+def programCentrala():
+	global tempLiving, statusProgram, startTemperatura, stopTemperatura
+	templateData = {
+		'tempLiving': tempLiving,
+		'statusProgram': statusProgram,
+		'startTemperatura': startTemperatura,
+		'stopTemperatura': stopTemperatura
+	}
+	return render_template('programCentrala.html', **templateData)
+
+
+@app.route("/programCentrala/statusProgram")
+def statusProgramRefresh():
+	global statusProgram
+	return str(statusProgram)
+	
+
+@app.route("/programCentrala/startTemperatura")
+def startTemperaturaRefresh():
+	global startTemperatura
+	return str(startTemperatura)
+
+@app.route("/programCentrala/stopTemperatura")
+def stopTemperaturaRefresh():
+	global stopTemperatura
+	return str(stopTemperatura)
+
 
 @app.route("/tempEvacuare")
 def tempEvacuare():
@@ -428,6 +561,7 @@ def tempCentrala():
 def distPeleti():
 	global dist
 	return str(dist)
+#	return "10"
 
 
 @app.route("/rezistentain")
@@ -465,11 +599,28 @@ def sneckTimpArdereFunc():
 	global timpSneckArdere 
 	return str(timpSneckArdere)
 
+@app.route("/programCentrala/tempLiving")
+def tempLivingProgramCentrala():
+	global tempLiving 
+	return str(tempLiving)
+
+
 @app.route("/statusCentrala")
 def statusCentralaFunc():
 	global statusCentrala
 	return statusCentrala
 
+@app.route("/programCentrala/setareProgram/<string:program>")
+def setareProgramCentrala(program):
+	global statusProgram
+	statusProgram = program
+	programCentralaMonitorFunctionare(statusProgram)
+	url = "UPDATE functionare SET program = '"+ statusProgram +"' WHERE nume = 'centrala'"
+	cursor.execute(url)
+	conn.commit()
+	return "back"
+
+	
 @app.route("/statusCentrala/<int:statusCentralaParam>")
 def statusCentralaParamFunc(statusCentralaParam):
 	global statusCentrala, cursor, conn
@@ -509,14 +660,19 @@ def statusCentralaParamFunc(statusCentralaParam):
 		conn.commit()
 	return "back"
 
-@app.route("/startCentrala/<string:val>")
-def startCentrala(val):
-	global statusCentrala
-	if (val == "START"):
-		pass
-	elif (val == "STOP"):
-		pass
+#@app.route("/startCentrala/<string:val>")
+#def startCentrala(val):
+#	global stareCentrala
+#	if (val == "START"):
+#		stareCentrala = 1
+#		url = "UPDATE functionare SET scentral = '"+ str(stareCentrala) +"' WHERE nume = 'centrala'"
+#		cursor.execute(url)
+#		conn.commit()
+#		#aprindere()
+#	elif (val == "STOP"):
+#		stareCentrala = 0 
+#		url = "UPDATE functionare SET scentral = '"+ str(stareCentrala) +"' WHERE nume = 'centrala'"
+#		cursor.execute(url)
+#		conn.commit()
+#	return "back"
 
-
-if __name__ == "__main__":
-	app.run(debug=True)

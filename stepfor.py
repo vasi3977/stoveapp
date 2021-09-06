@@ -1,6 +1,5 @@
 import RPi.GPIO as GPIO
 import time
-GPIO.setmode(GPIO.BCM)
 control_pins = [23,17,27,22]
 
 
@@ -24,7 +23,7 @@ def stepfor(val):
 				for pin in range(4):
 					GPIO.output(control_pins[pin], halfstep_seq[halfstep][pin])
 				time.sleep(0.001)
-	
+
 
 
 def stepback(val):
@@ -47,4 +46,4 @@ def stepback(val):
 				for pin in range(4):
 					GPIO.output(control_pins[pin], halfstep_seq[halfstep][pin])
 				time.sleep(0.001)
-	
+

@@ -1,9 +1,27 @@
-import requests
-import time
+import sqlite3
 
-BASE = "http://127.0.0.1:5000"
+conn = sqlite3.connect('centrala.db')
 
-for i in range(5):
-	response = requests.get(BASE + "/temp")
-	print(response.json())
-	time.sleep(1)
+c = conn.cursor()
+
+#c.execute("""CREATE TABLE datefunctionare(
+#	numar int,
+#	data_pornire text,
+#	data_oprire text,
+#	timp_functionare text
+#)""")
+
+#c.execute("INSERT INTO datefunctionare VALUES (1, datetime('now'), datetime('now'), '')")
+#statusCentrala = 'Stabil'
+#url = "UPDATE datefunctionare SET data_oprire = datetime('now') WHERE numar = " + str(1)
+#url = "DELETE FROM datefunctionare"
+#c.execute(url)
+c.execute("SELECT * FROM functionare")
+items = c.fetchall()
+
+for item in items:
+	print(item)
+
+conn.commit()
+
+conn.close()

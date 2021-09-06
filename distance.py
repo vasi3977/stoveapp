@@ -1,10 +1,10 @@
 #Libraries
 import RPi.GPIO as GPIO
 import time
- 
-#GPIO Mode (BOARD / BCM)
+
 GPIO.setmode(GPIO.BCM)
- 
+GPIO.setwarnings(False)
+  
 #set GPIO Pins
 GPIO_TRIGGER = 24
 GPIO_ECHO = 8
@@ -34,20 +34,9 @@ def distance():
  
     # time difference between start and arrival
     TimeElapsed = StopTime - StartTime
-    # multiply with the sonic speed (34300 cm/s)
+    # multiply with the sonic speed (34320 cm/s)
     # and divide by 2, because there and back
-    distance = (TimeElapsed * 34300) / 2
+    distance = (TimeElapsed * 34320) / 2
  
     return distance
  
-if __name__ == '__main__':
-    try:
-        while True:
-            dist = distance()
-            print ("Measured Distance = %.1f cm" % dist)
-            time.sleep(1)
- 
-        # Reset by pressing CTRL + C
-    except KeyboardInterrupt:
-        print("Measurement stopped by User")
-        GPIO.cleanup()
