@@ -74,7 +74,6 @@ def sendMail():
 	EMAIL_PASSWORD = 'Vasile3#!'
 
 	ip = get('https://api.ipify.org').text
-#	print('My public IP address is: {}'.format(ip))
 
 	with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
 		smtp.ehlo()
@@ -103,7 +102,7 @@ def sendMailPornire():
 
 
 
-#sendMailPornire()
+sendMailPornire()
 
 jobs=scheduler.get_jobs()
 for job in jobs:
@@ -114,7 +113,6 @@ scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 
 scheduler.add_job(id="temperaturaLiving", func = temperaturaLiving, trigger = 'interval', seconds = 5, max_instances=5)
 
 scheduler.add_job(id="mail", func = sendMail, trigger = 'interval', seconds = 21600, max_instances=5)
-#statusCentrala = 'OFF'
 
 
 
@@ -297,7 +295,6 @@ def perioadaStabil():
 	for job in jobs:
 		if(job.name == "perioadaStabil"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="perioadaStabil")
 	ardere()
 
 def sneckStabilOff():
@@ -314,9 +311,7 @@ def perioadaSneckStabil():
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name == "perioadaSneckStabil" or job.name == "stopAprindere"):
-			scheduler.remove_job(id = job.name)
-	#schedule.remove_job(id="perioadaSneckStabil")
-	#scheduler.remove_job(id="stopAprindere")	
+			scheduler.remove_job(id = job.name)	
 	pinON("sneck")
 	scheduler.add_job(id="sneckStabilOff", func = sneckStabilOff, trigger = 'interval', seconds = 5)
 	print("perioadaSneckStabil")
@@ -331,10 +326,6 @@ def stareTemperaturaEvacuare():
 		for job in jobs:
 			if(job.name == "stareTemperaturaEvacuare" or job.name == "stopAprindere" or job.name == "ventilatorAprindere" or job.name == "rezistentaAprindere"):
 				scheduler.remove_job(id = job.name)
-		#scheduler.remove_job(id="stareTemperaturaEvacuare")
-		#scheduler.remove_job(id="stopAprindere")
-		#scheduler.remove_job(id="ventilatorAprindere")
-		#scheduler.remove_job(id='rezistentaAprindere')
 		pinOFF("rezistenta")
 		pinON("ventilator")
 		stepback(1)
@@ -362,7 +353,6 @@ def rezistentaAprindere():
 	for job in jobs:
 		if(job.name == "rezistentaAprindere"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id='rezistentaAprindere')
 	scheduler.add_job(id = "ventilatorAprindere", func = ventilatorAprindere, trigger = 'interval', seconds = 8)
 	print("rezistentaAprindere")
 
@@ -406,9 +396,9 @@ def allJobsOff():
 	statusCentrala = 'OFF'
 	jobs=scheduler.get_jobs()
 	for job in jobs:
-		if(job.name != "senzori" or job.name != "mail"):
+		if(job.name != "senzori" or job.name != "mail" or job.name !="temperaturaLiving" or job.name != "statusCentralaMonitor"):
 			scheduler.remove_job(id = job.name)
-	#print(f[0].name)
+
 
 def programCentralaMonitorFunctionare(program):
 	global statusCentrala, startTemperatura, stopTemperatura
