@@ -22,7 +22,9 @@ h4 {
   
 }
 
-
+th,td {
+	font-size: 1rem;
+}
 div {
   font-size: 1.7rem;
   margin: 0.5rem auto;

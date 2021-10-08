@@ -8,8 +8,9 @@
    <body>
 	<nav class="navbar navbar-expand-lg navbar-light bg-light">
   		<div class="container-fluid">
-    			<a class="btn btn-primary btn-lg" href="/">Centrala</a>
-			<a class="btn btn-primary btn-lg" href="/programCentrala">Program Centrala</a>	    			
+    		<a class="btn btn-primary btn-lg" href="/centrala">Centrala</a>
+			<a class="btn btn-primary btn-lg" href="/dateFunctionare">Date Functionare</a>
+			<a class="btn btn-primary btn-lg" href="/">Program Centrala</a>	    			
   		</div>
 	</nav>
 
@@ -43,32 +44,35 @@
                   	<option value="2">Stabil</option>
                       	<option value="3">Ardere</option>
                       	<option value="4">Stop Ardere</option>
+						<option value="11">Stop Ardere fara senzor Living</option>
                       	<option value="6">Aprindere fara peleti</option>
+						<option value="10">Aprindere fara senzor Living</option>
                       	<option value="7">Eroare Aprindere</option>
                       	<option value="8">Eroare Ardere</option>
-			<option value="9">All Jobs Off</option>
+						<option value="9">All Jobs Off</option>
   		</select>
 		<button onclick="setStatusCentrala()" class="btn btn-primary">SET</button>
 	</div>
 	
 		
-	<div>Ventilator
+	<div>Ventilator: <span id="stareVentilatorID">{{ stareVentilator }}</span>
 		<button onclick="buttonOn('ventilator')" class="btn btn-primary">ON</button>
 		<button onclick="buttonOff('ventilator')" class="btn btn-primary">OFF</button>
 	</div>
-	<div>Sneck
+	<div>Sneck: <span id="stareSneckID">{{ stareSneck }}</span>
 		<button onclick="buttonOn('sneck')" class="btn btn-primary">ON</button>
 		<button onclick="buttonOff('sneck')" class="btn btn-primary">OFF</button>
 	</div>
-	<div>Pompa
+	<div>Pompa: <span id="starePompaID">{{ starePompa }}</span>
 		<button onclick="buttonOn('pompa')" class="btn btn-primary">ON</button>
 		<button onclick="buttonOff('pompa')" class="btn btn-primary">OFF</button>
 	</div>
-	<div>Rezistenta
+	<div>Rezistenta: <span id="stareRezistentaID">{{ stareRezistenta }}</span>
 		<button onclick="buttonOn('rezistenta')" class="btn btn-primary">ON</button>
 		<button onclick="buttonOff('rezistenta')" class="btn btn-primary">OFF</button>
 		<button onclick="rezistin()" class="btn btn-primary">IN</button>
 		<button onclick="rezistout()" class="btn btn-primary">OUT</button>
+		<span id="statusRezistentaID">{{ statusRezistenta }}</span>
 	</div>
 	<div>timpSneckArdere: <span id="timpSneckArdereID">{{timpSneckArdere}}</span>
 		<input type="number" id="input2" placeholder="nr intreg">
@@ -99,6 +103,64 @@
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("stareVentilatorID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/statusCentrala/stareVentilator", true);
+        xhttp.send();
+      }, 300) ;
+
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("stareSneckID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/statusCentrala/stareSneck", true);
+        xhttp.send();
+      }, 300) ;
+
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("starePompaID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/statusCentrala/starePompa", true);
+        xhttp.send();
+      }, 300) ;
+	
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("stareRezistentaID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/statusCentrala/stareRezistenta", true);
+        xhttp.send();
+      }, 300) ;
+
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("statusRezistentaID").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("GET", "/statusCentrala/statusRezistenta", true);
+        xhttp.send();
+      }, 10000) ;
+		
+
+
+
+	setInterval(function ( ) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
             document.getElementById("evacID").innerHTML = this.responseText;
           }
         };
@@ -115,6 +177,8 @@
         xhttp.open("GET", "/statusCentrala", true);
         xhttp.send();
       }, 1000) ;
+
+
 	setInterval(function ( ) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
@@ -134,7 +198,7 @@
         };
         xhttp.open("GET", "/distance", true);
         xhttp.send();
-      }, 2000) ;
+      }, 5000) ;
 
 	setInterval(function ( ) {
         var xhttp = new XMLHttpRequest();
