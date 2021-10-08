@@ -1,15 +1,21 @@
 from flask import Flask, render_template
 import datetime
-from ds18b20 import read_temp
+#from ds18b20 import read_temp
 import MAX6675 as MAX6675
-from stepfor import stepfor, stepback
 from distance import distance
 from flask_apscheduler import APScheduler
 import RPi.GPIO as GPIO
 import sqlite3
 import os
 import smtplib
+import time
 from requests import get
+from motor3 import moveRezistenta
+import psutil
+
+
+
+
 
 ventilator = 6
 sneck = 13
@@ -17,12 +23,21 @@ pompa = 19
 rezistenta = 26
 temperaturaInitialaAprindere = 0
 
+stareVentilator = "OFF"
+stareSneck = "OFF"
+starePompa = "OFF"
+stareRezistenta = "OFF"
+statusRezistenta = "OUT"
+
 
 GPIO.setup(ventilator, GPIO.OUT)
 GPIO.setup(sneck, GPIO.OUT)
 GPIO.setup(pompa, GPIO.OUT)
 GPIO.setup(rezistenta, GPIO.OUT)
-
+GPIO.output(ventilator, GPIO.HIGH)
+GPIO.output(sneck, GPIO.HIGH)
+GPIO.output(pompa, GPIO.HIGH)
+GPIO.output(rezistenta, GPIO.HIGH)
 
 scheduler = APScheduler()
 scheduler.start()
@@ -31,13 +46,22 @@ scheduler.start()
 CSK = 21
 CS = 20
 DO = 16
+
+CSK2 = 7
+CS2= 11
+DO2 = 12
 sensor = MAX6675.MAX6675(CSK,CS,DO)
+sensor1 = MAX6675.MAX6675(CSK2,CS2,DO2)
 
+cont = 0
 
-
-dist = round(distance())
+#dist = round(distance())
+dist = 11
 Temp = sensor.readTempC()
-c = read_temp()
+time.sleep(0.5)
+
+Temp2 = sensor1.readTempC()
+#c = read_temp()
 
 
 
@@ -46,13 +70,9 @@ cursor = conn.cursor()
 
 
 
-cursor.execute("SELECT * FROM datefunctionare ORDER BY data_pornire DESC LIMIT 1")
+cursor.execute("SELECT * FROM datefunctionare")
 items = cursor.fetchall()
-if (len(items) == 0):
-	numarCurent = 0
-else:
-	for item in items:
-		numarCurent = item[0]
+numarCurent = len(items)
 
 def temperaturaLiving():
 	global tempLiving
@@ -63,10 +83,22 @@ def temperaturaLiving():
 tempLiving = temperaturaLiving()
 
 def senzori():
-	global Temp, c, dist
+	global Temp, Temp2, dist, cont
 	Temp = round(sensor.readTempC(), 1)
-	c = round(read_temp(), 1)
-	dist = round(distance())
+	time.sleep(0.3)
+#	c = round(read_temp(), 1)
+#	dist = round(distance())
+	Temp2 = round(sensor1.readTempC(), 1)
+
+	if (Temp2 > 40):
+		if (cont == 0):
+			pinON("pompa")
+			cont = 1
+	else:
+		if (cont == 1):
+			pinOFF("pompa")
+			cont = 0
+
 	return "back"
 
 def sendMail():
@@ -100,45 +132,65 @@ def sendMailPornire():
 		smtp.sendmail(EMAIL_ADRESS, 'vasile.stan@gmail.com', msg)
 
 
-
-
 sendMailPornire()
 
 jobs=scheduler.get_jobs()
 for job in jobs:
 	if(job.name == "senzori"):
 		scheduler.remove_job(id = job.name)
-scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 3, max_instances=5)
+scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 5, max_instances=5)
 
 scheduler.add_job(id="temperaturaLiving", func = temperaturaLiving, trigger = 'interval', seconds = 5, max_instances=5)
 
 scheduler.add_job(id="mail", func = sendMail, trigger = 'interval', seconds = 21600, max_instances=5)
 
-
-
-
+def triggerRezist(ind):
+	global statusRezistenta
+	scheduler.remove_job("senzori")
+	scheduler.remove_job("temperaturaLiving")
+	scheduler.remove_job("statusCentralaMonitor")
+	moveRezistenta(2, 1.8, 6, ind, 100)
+	scheduler.add_job(id="senzori", func = senzori, trigger = 'interval', seconds = 5, max_instances=5)
+	scheduler.add_job(id="temperaturaLiving", func = temperaturaLiving, trigger = 'interval', seconds = 5, max_instances=5)
+	scheduler.add_job(id="statusCentralaMonitor", func = statusCentralaMonitor, trigger = 'interval', seconds = 2, max_instances=5)
+	if(ind == 1):
+		statusRezistenta = "IN"
+	else:
+		statusRezistenta = "OUT"
 
 def pinOFF(par1):
+	global stareVentilator, stareSneck, starePompa, stareRezistenta
 	if(par1 == "ventilator"):
 		GPIO.output(ventilator, GPIO.HIGH)
+		stareVentilator = "OFF"
 	elif(par1 == "sneck"):
 		GPIO.output(sneck, GPIO.HIGH)
+		stareSneck = "OFF"
 	elif(par1 == "pompa"):
 		GPIO.output(pompa, GPIO.HIGH)
+		cont = 0
+		starePompa = "OFF"
 	elif(par1 == "rezistenta"):
 		GPIO.output(rezistenta, GPIO.HIGH)
+		stareRezistenta = "OFF"
 
 
 
 def pinON(par2):
+	global stareVentilator, stareSneck, starePompa, stareRezistenta
 	if(par2 == "ventilator"):
 		GPIO.output(ventilator, GPIO.LOW)
+		stareVentilator = "ON"
 	elif(par2 == "sneck"):
 		GPIO.output(sneck, GPIO.LOW)
+		stareSneck = "ON"
 	elif(par2 == "pompa"):
 		GPIO.output(pompa, GPIO.LOW)
+		cont = 1
+		starePompa = "ON"
 	elif(par2 == "rezistenta"):
 		GPIO.output(rezistenta, GPIO.LOW)
+		stareRezistenta = "ON"
 
 def pompaFinal():
 	jobs=scheduler.get_jobs()
@@ -148,7 +200,6 @@ def pompaFinal():
 	#scheduler.remove_job(id="pompaFinal")
 	pinOFF("pompa")
 	print("pompaFinal")
-
 
 def eroare(val):
 	global cursor, conn
@@ -162,21 +213,17 @@ def eroare(val):
 	conn.commit()
 	items = cursor.fetchall()
 	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
-	datafinala = datetime.datetime.now()
+	datafinala = datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
 	diferenta = datafinala - datainitiala
-
-	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
-	cursor.execute(url2)
-
-	conn.commit()
+	if(val == "Ardere"):
+		url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+		cursor.execute(url2)
+		conn.commit()
 	jobs=scheduler.get_jobs()
 	for job in jobs:
-		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere" or job.name == "pompaFinal"):
+		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="startSneckArdere")
-	#scheduler.remove_job(id="stopSneckArdere")
 	pinOFF("ventilator")
-	#scheduler.remove_job(id="pompaFinal")
 
 
 def curatareFinal():
@@ -185,26 +232,24 @@ def curatareFinal():
 	for job in jobs:
 		if(job.name == "curatareFinal"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="curatareFinal")
 	pinOFF("ventilator")
-	scheduler.add_job(id="pompaFinal", func = pompaFinal, trigger = 'interval', seconds = 120)
+#	scheduler.add_job(id="pompaFinal", func = pompaFinal, trigger = 'interval', seconds = 120)
 	global statusCentrala
 	statusCentrala = 'OFF'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	url3 = "SELECT * FROM datefunctionare WHERE numar = "+str(numarCurent)
 	cursor.execute(url3)
-	conn.commit()
 	items = cursor.fetchall()
-	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
-	datafinala = datetime.datetime.now()
+	datainitiala = datetime.datetime.strptime(items[0][1], '%d/%m/%Y, %H:%M:%S')
+	datafinalaTemp = datetime.datetime.now().strftime('%d/%m/%Y, %H:%M:%S')
+	datafinala = datetime.datetime.strptime(datafinalaTemp, '%d/%m/%Y, %H:%M:%S')
 	diferenta = datafinala - datainitiala
 
-	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+	url2 = "UPDATE datefunctionare SET data_oprire = '"+datafinalaTemp+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
 	cursor.execute(url2)
 	conn.commit()
 	cursor.execute(url)
 	conn.commit()
-	print("curatareFinal")
 
 
 def stopArdere():
@@ -213,8 +258,6 @@ def stopArdere():
 	for job in jobs:
 		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="startSneckArdere")
-	#scheduler.remove_job(id="stopSneckArdere")
 	scheduler.add_job(id="curatareFinal", func = curatareFinal, trigger = 'interval', seconds = 350)
 	pinOFF("sneck")
 	global statusCentrala
@@ -222,8 +265,6 @@ def stopArdere():
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
 	conn.commit()
-	print("stopArdere")
-
 
 
 def stopSneckArdere():
@@ -231,26 +272,20 @@ def stopSneckArdere():
 	for job in jobs:
 		if(job.name == "stopSneckArdere"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="stopSneckArdere")
 	pinOFF("sneck")
-	print("stopSneckArdere")
 
 
 def startSneckArdere():
-	print("startSneckArdere")
 	global timpSneckArdere
 	if(Temp < 30):
 		jobs=scheduler.get_jobs()
 		for job in jobs:
 			if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
 				scheduler.remove_job(id = job.name)
-		#scheduler.remove_job(id="startSneckArdere")
-		#scheduler.remove_job(id="stopSneckArdere")
 		eroare("Ardere")
 	else:
 		pinON("sneck")
 		scheduler.add_job(id="stopSneckArdere", func = stopSneckArdere, trigger = 'interval', seconds = timpSneckArdere)
-		print(timpSneckArdere)
 
 
 def ardere():
@@ -259,36 +294,25 @@ def ardere():
 	for job in jobs:
 		if(job.name == "ventilatorAprindere" or job.name == "stopAprindere" or job.name == "rezistentaAprindere"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="ventilatorAprindere")
-	#scheduler.remove_job(id="stopAprindere")
-	#scheduler.remove_job(id='rezistentaAprindere')
 	global statusCentrala
 	statusCentrala = 'Ardere'
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
 	conn.commit()
-	url1 = "INSERT INTO datefunctionare VALUES (1, datetime('now'), datetime('now'), '')"
-	cursor.execute(url2)
-	conn.commit()
-	pinON("pompa")
 	pinON("ventilator")
+#	pinON("pompa")
 	scheduler.add_job(id="startSneckArdere", func = startSneckArdere, trigger = 'interval', seconds = 12)
-	print("Ardere")
 
 
 def stopAprindere():
+	triggerRezist(0)
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name == "ventilatorAprindere" or job.name == "stopAprindere" or job.name == "stareTemperaturaEvacuare"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="stopAprindere")
-	#scheduler.remove_job(id="ventilatorAprindere")
-	#scheduler.remove_job(id="stareTemperaturaEvacuare")
 	pinOFF("rezistenta")
 	pinON("ventilator")
-	stepback(1)
 	eroare("aprindere")
-	print("stopAprindere")
 
 def perioadaStabil():
 	jobs=scheduler.get_jobs()
@@ -302,10 +326,7 @@ def sneckStabilOff():
 	for job in jobs:
 		if(job.name == "sneckStabilOff" or job.name == "stopAprindere"):
 			scheduler.remove_job(id = job.name)
-	#scheduler.remove_job(id="sneckStabilOff")
-	#scheduler.remove_job(id="stopAprindere")
 	pinOFF("sneck")
-	print("sneckStabilOff")
 
 def perioadaSneckStabil():
 	jobs=scheduler.get_jobs()
@@ -314,27 +335,26 @@ def perioadaSneckStabil():
 			scheduler.remove_job(id = job.name)	
 	pinON("sneck")
 	scheduler.add_job(id="sneckStabilOff", func = sneckStabilOff, trigger = 'interval', seconds = 5)
-	print("perioadaSneckStabil")
 	
 
 def stareTemperaturaEvacuare():
 	print("stareTemperaturaEvacuare")
-	global Temp, temperaturaInitialaAprindere, cursor, conn
+	global Temp, temperaturaInitialaAprindere, cursor, conn, statusCentrala
 	temperaturaEvacuare = Temp
 	if (temperaturaEvacuare - temperaturaInitialaAprindere > 10):
+		triggerRezist(0)
 		jobs=scheduler.get_jobs()
 		for job in jobs:
 			if(job.name == "stareTemperaturaEvacuare" or job.name == "stopAprindere" or job.name == "ventilatorAprindere" or job.name == "rezistentaAprindere"):
 				scheduler.remove_job(id = job.name)
 		pinOFF("rezistenta")
 		pinON("ventilator")
-		stepback(1)
-		global statusCentrala
+
 		statusCentrala = "Stabil"
 		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 		cursor.execute(url)
 		conn.commit()
-		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
+		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 150)
 		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
 
 
@@ -342,10 +362,8 @@ def ventilatorAprindere():
 	print(GPIO.input(ventilator))
 	if(GPIO.input(ventilator)):
 		pinON("ventilator")
-		print("ventilator OFF")
 	else:
 		pinOFF("ventilator")
-		print("ventilator ON")
 
 
 def rezistentaAprindere():
@@ -354,7 +372,6 @@ def rezistentaAprindere():
 		if(job.name == "rezistentaAprindere"):
 			scheduler.remove_job(id = job.name)
 	scheduler.add_job(id = "ventilatorAprindere", func = ventilatorAprindere, trigger = 'interval', seconds = 8)
-	print("rezistentaAprindere")
 
 
 def stopSneck():
@@ -370,26 +387,26 @@ def stopSneck():
 	pinOFF('sneck')
 	scheduler.add_job(id="stopAprindere", func = stopAprindere, trigger = 'interval', seconds = 900)
 	pinON('rezistenta')
-	stepfor(1)
-	scheduler.add_job(id="rezistentaAprindere", func = rezistentaAprindere, trigger = 'interval', seconds = 120)
+	scheduler.add_job(id="rezistentaAprindere", func = rezistentaAprindere, trigger = 'interval', seconds = 100)
 	scheduler.add_job(id="stareTemperaturaEvacuare", func = stareTemperaturaEvacuare, trigger = 'interval', seconds = 3)
-	print("stopSneck")
 
 
 def aprindere():
+	triggerRezist(1)
+
 	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn, numarCurent
+	temperaturaInitialaAprindere = Temp
 	statusCentrala = 'Aprindere'
 	numarCurent += 1
-	temperaturaInitialaAprindere = Temp
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
-	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now())+"', '"+str(datetime.datetime.now())+"', '')"
+	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))+"', '"+""+"', '')"
 	cursor.execute(url2)
 	conn.commit()
 	pinON('sneck')
 	pinOFF('rezistenta')
-	scheduler.add_job(id="stopSneck", func = stopSneck, trigger = 'interval', seconds = 100)
-	print("Aprindere")
+	scheduler.add_job(id="stopSneck", func = stopSneck, trigger = 'interval', seconds = 120)
+
 
 def allJobsOff():
 	global statusCentrala
@@ -401,18 +418,18 @@ def allJobsOff():
 
 
 def programCentralaMonitorFunctionare(program):
-	global statusCentrala, startTemperatura, stopTemperatura
-	if(program == "PROG"):
-		weekday = float(datetime.datetime.now().strftime("%w"))
-		hour = float(datetime.datetime.now().strftime("%H"))
-		minute = float(datetime.datetime.now().strftime("%M"))
-		if(1<= weekday and weekday <=5):     
-			if((22 > hour and hour >= 17) or (8 > hour and (hour >= 6 and minute >= 30))):
+	global startTemperatura, stopTemperatura
+	weekday = int(datetime.datetime.now().strftime("%w"))
+	hour = int(datetime.datetime.now().strftime("%H"))
+	minute = int(datetime.datetime.now().strftime("%M"))
+	if(program == "PROG"):	
+		if(1<= weekday and weekday <=5):
+			if((22 > hour and hour >= 17) or (8 > hour and hour >= 6)):
 				startTemperatura = 21.0
 				stopTemperatura = 22.0
-			elif(22 < hour or (hour <= 6 and minute < 30)):
-				startTemperatura = 19
-				stopTemperatura = 20
+			elif(24 < hour or hour <= 6):
+				startTemperatura = 19.5
+				stopTemperatura = 20.5
 			else:
 				startTemperatura = 20.5
 				stopTemperatura = 21.5
@@ -428,9 +445,66 @@ def programCentralaMonitorFunctionare(program):
 	if(program == "PROG2"):
 		startTemperatura = 21.5
 		stopTemperatura = 22.5
-	if(program == "PROG1"):
-		startTemperatura = 21
-		stopTemperatura = 22
+	if(program == "PROG3"):
+		startTemperatura = 20.5
+		stopTemperatura = 21.5
+	if(program == "FIX"):
+		if(1<= weekday and weekday <=5):
+			if(hour == 6):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 17):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 20):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			else:
+				startTemperatura = 20.0
+				stopTemperatura = 21.0
+		else:
+			if(hour == 6):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 17):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 20):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			else:
+				startTemperatura = 20.0
+				stopTemperatura = 21.0
+
+	if(program == "FIX2"):
+		if(1<= weekday and weekday <=5):
+			if(hour == 6 and minute >= 1):
+				startTemperatura = 21.5
+				stopTemperatura = 22.5
+			elif(hour == 17 and minute >= 1):
+				startTemperatura = 21.5
+				stopTemperatura = 22.5
+			elif(hour == 20 and minute >= 1):
+				startTemperatura = 21.5
+				stopTemperatura = 22.5
+			else:
+				startTemperatura = 20.5
+				stopTemperatura = 21.5
+		else:
+			if(hour == 7 and minute >= 1):
+				startTemperatura = 21.5
+				stopTemperatura = 22.5
+			elif(hour == 17 and minute >= 1):
+				startTemperatura = 21.5
+				stopTemperatura = 22.5
+			elif(hour == 20 and minute >= 1):
+				startTemperatura = 21.5
+				stopTemperatura = 22.5
+			else:
+				startTemperatura = 20.5
+				stopTemperatura = 21.5
+
+
 	if(program == "AER"):
 		startTemperatura = 11
 		stopTemperatura = 12
@@ -440,14 +514,15 @@ def programCentralaMonitorFunctionare(program):
 
 def statusCentralaMonitor():
 	global tempLiving, startTemperatura, stopTemperatura
+	programCentralaMonitorFunctionare(statusProgram)
 	if(tempLiving < startTemperatura):
 		if(statusCentrala == "OFF"):
 			aprindere()
 	if(tempLiving > stopTemperatura):
-		if(statusCentrala == "ARDERE"):
+		if(statusCentrala == "Ardere"):
 			stopArdere()
 
-scheduler.add_job(id="statusCentralaMonitor", func = statusCentralaMonitor, trigger = 'interval', seconds = 2, max_instances=5)
+scheduler.add_job(id="statusCentralaMonitor", func = statusCentralaMonitor, trigger = 'interval', seconds = 3, max_instances=5)
 
 
 cursor.execute("SELECT * FROM functionare")
@@ -459,26 +534,20 @@ for item in items:
 	statusProgram = item[4]
 	programCentralaMonitorFunctionare(statusProgram)
 	if(statusCentrala == "Aprindere"):
-		print("Aprindere")
 		temperaturaInitialaAprindere = sensor.readTempC()
 		stopSneck()
 	elif(statusCentrala == "Stabil"):
-		print("Stabil")
 		pinOFF("rezistenta")
 		pinON("ventilator")
 		scheduler.add_job(id="perioadaStabil", func = perioadaStabil, trigger = 'interval', seconds = 120)
 		scheduler.add_job(id="perioadaSneckStabil", func = perioadaSneckStabil, trigger = 'interval', seconds = 55)
 	elif(statusCentrala == "Ardere"):
-		print("Ardere")
 		ardere()
 	elif(statusCentrala == "Stop Ardere"):
-		print("Stop Ardere")
 		stopArdere()
 	elif(statusCentrala == "Eroare Aprindere"):
-		print("Eroare Aprindere")
 		eroare("Aprindere")
 	elif(statusCentrala == "Eroare Ardere"):
-		print("Eroare Ardere")
 		eroare("Ardere")
 	
 
@@ -490,22 +559,24 @@ pinOFF("pompa")
 pinOFF("rezistenta")
 
 
-@app.route("/")
+@app.route("/centrala")
 def index():
-#	now = datetime.datetime.now()
-#	timeString = now.strftime("%H:%M   %d/%m/%Y")
-	global Temp, c, statusCentrala, timpSneckArdere
+	global Temp, Temp2, statusCentrala, timpSneckArdere, stareVentilator, stareSneck, starePompa, stareRezistenta, statusRezistenta
 	templateData = {
-#		'time': timeString,
 		'dist': dist,
 		'tempEvacuare': Temp,
-		'tempCentrala': c,
+		'tempCentrala': Temp2,
 		'statusCentrala': statusCentrala,
-		'timpSneckArdere': timpSneckArdere
+		'timpSneckArdere': timpSneckArdere,
+		'stareVentilator': stareVentilator,
+		'stareSneck': stareSneck,
+		'starePompa': starePompa,
+		'stareRezistenta': stareRezistenta,
+		'statusRezistenta': statusRezistenta
 	}
 	return render_template('index.html', **templateData)
 
-@app.route("/programCentrala")
+@app.route("/")
 def programCentrala():
 	global tempLiving, statusProgram, startTemperatura, stopTemperatura
 	templateData = {
@@ -515,6 +586,18 @@ def programCentrala():
 		'stopTemperatura': stopTemperatura
 	}
 	return render_template('programCentrala.html', **templateData)
+
+@app.route("/dateFunctionare")
+def dateFunctionare():
+	global cursor
+	cursor.execute("SELECT * FROM datefunctionare")
+	items = cursor.fetchall()
+	items = reversed(items)
+	templateData = {
+		'items': items
+		}
+	return render_template('bazaDate.html', **templateData)
+
 
 
 @app.route("/programCentrala/statusProgram")
@@ -537,32 +620,43 @@ def stopTemperaturaRefresh():
 @app.route("/tempEvacuare")
 def tempEvacuare():
 	global Temp
-	#Temp = sensor.readTempC()
 	return str(Temp)
 
 
 @app.route("/tempCentrala")
 def tempCentrala():
-	global c
-	#c = read_temp()
-	return str(c)
+	global Temp2
+	return str(Temp2)
 
 @app.route("/distance")
 def distPeleti():
 	global dist
-	return str(dist)
-#	return "10"
+#	dist = round(distance())
+	return str(11)
 
 
 @app.route("/rezistentain")
 def rezistentain():
-	stepfor(1)
-	return "for"
+#	for p in psutil.process_iter(attrs=['pid', 'name']):
+#		if "flask" in (p.info['name']).lower():
+#			print("yes", (p.info['pid']))
+#	p = psutil.Process(p.info['pid'])
+#	p.suspend()
+	triggerRezist(1)
+#	p.resume()
+	return "IN"
 
 @app.route("/rezistentaout")
 def rezistentaout():
-	stepback(1)
-	return "back"
+#	for p in psutil.process_iter(attrs=['pid', 'name']):
+#		if "flask" in (p.info['name']).lower():
+#			print("yes", (p.info['pid']))
+#	p = psutil.Process(p.info['pid'])
+#	p.suspend()
+	triggerRezist(0)
+#	p.resume()
+
+	return "OUT"
 
 
 @app.route("/pin/<string:pin_id>/<string:val>")
@@ -600,6 +694,32 @@ def statusCentralaFunc():
 	global statusCentrala
 	return statusCentrala
 
+@app.route("/statusCentrala/stareVentilator")
+def statusCentralaStareVentilator():
+	global stareVentilator
+	return stareVentilator
+
+@app.route("/statusCentrala/stareSneck")
+def statusCentralaStareSneck():
+	global stareSneck
+	return stareSneck
+
+@app.route("/statusCentrala/starePompa")
+def statusCentralaStarePompa():
+	global starePompa
+	return starePompa
+
+@app.route("/statusCentrala/stareRezistenta")
+def statusCentralaStareRezistenta():
+	global stareRezistenta
+	return stareRezistenta
+
+@app.route("/statusCentrala/statusRezistenta")
+def statusCentralaStareRezistentaMove():
+	global statusRezistenta
+	return statusRezistenta
+
+
 @app.route("/programCentrala/setareProgram/<string:program>")
 def setareProgramCentrala(program):
 	global statusProgram
@@ -613,7 +733,7 @@ def setareProgramCentrala(program):
 	
 @app.route("/statusCentrala/<int:statusCentralaParam>")
 def statusCentralaParamFunc(statusCentralaParam):
-	global statusCentrala, cursor, conn
+	global statusCentrala, cursor, conn, temperaturaInitialaAprindere
 	if(statusCentralaParam == 0):
 		statusCentrala = "OFF"
 		url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
@@ -634,14 +754,30 @@ def statusCentralaParamFunc(statusCentralaParam):
 		ardere()
 	elif(statusCentralaParam == 4):
 		stopArdere()
+	elif(statusCentralaParam == 11):
+		stopArdere()
+		k = 0
+		jobs=scheduler.get_jobs()
+		for job in jobs:
+			if(job.name == "statusCentralaMonitor"):
+				k = 1
+		if(k == 0):
+			scheduler.add_job(id="statusCentralaMonitor", func = statusCentralaMonitor, trigger = 'interval', seconds = 3, max_instances=5)
+
 	elif(statusCentralaParam == 6):
-		global temperaturaInitialaAprindere
 		temperaturaInitialaAprindere = sensor.readTempC()
 		stopSneck()
 	elif(statusCentralaParam == 7):
 		eroare("Aprindere")
 	elif(statusCentralaParam == 8):
 		eroare("Ardere")
+	elif(statusCentralaParam == 10):
+		jobs=scheduler.get_jobs()
+		for job in jobs:
+			if(job.name == "statusCentralaMonitor"):
+				scheduler.remove_job(id = job.name)
+		aprindere()
+
 	elif(statusCentralaParam == 9):
 		allJobsOff()
 		statusCentrala = "OFF"
@@ -649,6 +785,8 @@ def statusCentralaParamFunc(statusCentralaParam):
 		cursor.execute(url)
 		conn.commit()
 	return "back"
+
+
 
 #@app.route("/startCentrala/<string:val>")
 #def startCentrala(val):
@@ -665,4 +803,16 @@ def statusCentralaParamFunc(statusCentralaParam):
 #		cursor.execute(url)
 #		conn.commit()
 #	return "back"
+
+
+@app.route("/bazaDate")
+def programBaza():
+	global tempLiving, statusProgram, startTemperatura, stopTemperatura
+	templateData = {
+		'tempLiving': tempLiving,
+		'statusProgram': statusProgram,
+		'startTemperatura': startTemperatura,
+		'stopTemperatura': stopTemperatura
+	}
+	return render_template('bazaDate.html', **templateData)
 
