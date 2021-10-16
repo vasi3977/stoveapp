@@ -204,6 +204,7 @@ def pompaFinal():
 def eroare(val):
 	global cursor, conn
 	global statusCentrala
+	pinOFF("ventilator")
 	statusCentrala = 'Eroare ' + val
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
@@ -215,15 +216,11 @@ def eroare(val):
 	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
 	datafinala = datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
 	diferenta = datafinala - datainitiala
-	if(val == "Ardere"):
-		url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
-		cursor.execute(url2)
-		conn.commit()
-	jobs=scheduler.get_jobs()
-	for job in jobs:
-		if(job.name == "startSneckArdere" or job.name == "stopSneckArdere"):
-			scheduler.remove_job(id = job.name)
-	pinOFF("ventilator")
+	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+	cursor.execute(url2)
+	conn.commit()
+	
+	
 
 
 def curatareFinal():
