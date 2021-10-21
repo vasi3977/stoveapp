@@ -202,7 +202,7 @@ def pompaFinal():
 	print("pompaFinal")
 
 def eroare(val):
-	global cursor, conn
+	global cursor, conn, numarCurent, stopTemperatura, statusProgram, tempLiving
 	global statusCentrala
 	pinOFF("ventilator")
 	statusCentrala = 'Eroare ' + val
@@ -216,7 +216,7 @@ def eroare(val):
 	datainitiala = datetime.datetime.strptime(items[0][1], '%Y-%m-%d %H:%M:%S.%f')
 	datafinala = datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
 	diferenta = datafinala - datainitiala
-	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+	url2 = "UPDATE datefunctionare SET data_oprire = '"+str(datafinala)+"', timp_functionare = '"+str(diferenta)+"', tempstop = '"+str(tempLiving)+"', programstop = '"+statusProgram+"' WHERE numar = " + str(numarCurent)
 	cursor.execute(url2)
 	conn.commit()
 	
@@ -224,7 +224,7 @@ def eroare(val):
 
 
 def curatareFinal():
-	global cursor, conn, numarCurent
+	global cursor, conn, numarCurent, stopTemperatura, statusProgram, tempLiving
 	jobs=scheduler.get_jobs()
 	for job in jobs:
 		if(job.name == "curatareFinal"):
@@ -242,7 +242,7 @@ def curatareFinal():
 	datafinala = datetime.datetime.strptime(datafinalaTemp, '%d/%m/%Y, %H:%M:%S')
 	diferenta = datafinala - datainitiala
 
-	url2 = "UPDATE datefunctionare SET data_oprire = '"+datafinalaTemp+"', timp_functionare = '"+str(diferenta)+"' WHERE numar = " + str(numarCurent)
+	url2 = "UPDATE datefunctionare SET data_oprire = '"+datafinalaTemp+"', timp_functionare = '"+str(diferenta)+"', tempstop = '"+str(tempLiving)+"', programstop = '"+statusProgram+"' WHERE numar = " + str(numarCurent)
 	cursor.execute(url2)
 	conn.commit()
 	cursor.execute(url)
@@ -391,13 +391,15 @@ def stopSneck():
 def aprindere():
 	triggerRezist(1)
 
-	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn, numarCurent
+	global temperaturaInitialaAprindere, Temp, statusCentrala, cursor, conn, numarCurent, startTemperatura, statusProgram, tempLiving
 	temperaturaInitialaAprindere = Temp
 	statusCentrala = 'Aprindere'
 	numarCurent += 1
 	url = "UPDATE functionare SET status = '"+ statusCentrala +"' WHERE nume = 'centrala'"
 	cursor.execute(url)
-	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))+"', '"+""+"', '')"
+#	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))+"', '"+""+"', '')"
+	url2 = "INSERT INTO datefunctionare VALUES ("+ str(numarCurent) +", '"+str(datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))+"', '', '', '"+str(tempLiving)+"', '', '"+statusProgram+"', ''" +")"
+
 	cursor.execute(url2)
 	conn.commit()
 	pinON('sneck')
@@ -500,7 +502,61 @@ def programCentralaMonitorFunctionare(program):
 			else:
 				startTemperatura = 20.5
 				stopTemperatura = 21.5
-
+	if(program == "FIX3"):
+		if(1<= weekday and weekday <=5):
+			if(hour == 6 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 17 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 20 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			else:
+				startTemperatura = 19.5
+				stopTemperatura = 20.5
+		else:
+			if(hour == 7 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 17 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 20 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			else:
+				startTemperatura = 19.5
+				stopTemperatura = 20.5
+	
+	if(program == "FIX4"):
+		if(1<= weekday and weekday <=5):
+			if(hour == 6 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 17 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 20 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			else:
+				startTemperatura = 15.5
+				stopTemperatura = 16.5
+		else:
+			if(hour == 7 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 17 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			elif(hour == 20 and minute >= 1):
+				startTemperatura = 21.0
+				stopTemperatura = 22.0
+			else:
+				startTemperatura = 15.5
+				stopTemperatura = 16.5
 
 	if(program == "AER"):
 		startTemperatura = 11
@@ -510,7 +566,7 @@ def programCentralaMonitorFunctionare(program):
 		stopTemperatura = 28
 
 def statusCentralaMonitor():
-	global tempLiving, startTemperatura, stopTemperatura
+	global tempLiving, startTemperatura, stopTemperatura, statusProgram
 	programCentralaMonitorFunctionare(statusProgram)
 	if(tempLiving < startTemperatura):
 		if(statusCentrala == "OFF"):
