@@ -1,7 +1,7 @@
 # stoveapp
 webserver for pellet stove with raspberry pi zero w
 
-This app works in my pellet stove installed in my home. From 2 years I have heat from sep/oct till apr/may with this application.
+This app works in my pellet stove installed in my home. From 2019 I have heat from sep/oct till apr/may with this application.
 The python flask web server runs on a raspberry pi zero w module, 2 MAX6675 sensors, 1 ultrasonic sensor HC-SR04+, 1 stepper motor Nema 17, driver DRV8825,
 2 AC-DC 230V to 12 V transformers, solid state relay with 4 relays.
 I made this app because my initial pelet stove control board has been damaged by a short and I told myself I can do it.
